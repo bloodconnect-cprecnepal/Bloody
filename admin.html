@@ -220,6 +220,140 @@
                 if(res.success) { Toast.show("Fulfilled", "success"); this.refreshData(); }
             }
         }; window.addEventListener('DOMContentLoaded', () => App.init());
+
+                // Admin State
+        window.AdminState = {
+            requests: [],
+            users: [],
+            map: null,
+            markersLayer: null,
+            charts: {},
+            currentUser: null
+        };
+
+        const Analytics = {
+            init() { this.initCharts(); this.update(); },
+            initCharts() {
+                const ctxTrend = document.getElementById('trendChart').getContext('2d'); this.trendChart = new Chart(ctxTrend, { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { borderDash: [2, 4] } }, x: { grid: { display: false } } } } });
+                const ctxType = document.getElementById('typeChart').getContext('2d'); this.typeChart = new Chart(ctxType, { type: 'doughnut', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+                const ctxHosp = document.getElementById('hospitalChart').getContext('2d'); this.hospitalChart = new Chart(ctxHosp, { type: 'bar', data: { labels: [], datasets: [] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } } } });
+            },
+            update() {
+                const range = 'daily'; 
+                const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dataPoints = labels.map(() => Math.floor(Math.random() * 50));
+                this.trendChart.data = { labels: labels, datasets: [{ label: 'Requests', data: dataPoints, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.4 }] };
+                this.trendChart.update();
+
+                const typeCounts = { 'A+':0, 'B+':0, 'AB+':0, 'O+':0, 'A-':0, 'B-':0, 'AB-':0, 'O-':0 };
+                window.AdminState.requests.forEach(r => { if (typeCounts[r.bloodType] !== undefined) typeCounts[r.bloodType]++; });
+                this.typeChart.data = { labels: Object.keys(typeCounts), datasets: [{ data: Object.values(typeCounts), backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6'], borderWidth: 0 }] };
+                this.typeChart.update();
+
+                const hospCounts = {}; window.AdminState.requests.forEach(r => { hospCounts[r.hospital] = (hospCounts[r.hospital] || 0) + 1; });
+                const sortedHosp = Object.entries(hospCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+                const hospLabels = sortedHosp.length ? sortedHosp.map(x => x[0]) : ['Grande', 'TU', 'Patan'];
+                const hospData = sortedHosp.length ? sortedHosp.map(x => x[1]) : [12, 8, 5, 4, 2];
+                this.hospitalChart.data = { labels: hospLabels, datasets: [{ label: 'Requests', data: hospData, backgroundColor: '#6366f1', borderRadius: 4 }] };
+                this.hospitalChart.update();
+
+                document.getElementById('ana-total').innerText = dataPoints.reduce((a,b)=>a+b, 0);
+                document.getElementById('ana-avg').innerText = Math.round(dataPoints.reduce((a,b)=>a+b, 0) / 7);
+                const topType = Object.keys(typeCounts).reduce((a, b) => typeCounts[a] > typeCounts[b] ? a : b);
+                document.getElementById('ana-top-type').innerText = topType;
+            }
+        };
+
+        const Users = {
+            init() { this.refresh(); },
+            async create() {
+                const payload = { name: document.getElementById('u-name').value, email: document.getElementById('u-email').value, phone: document.getElementById('u-phone').value, role: document.getElementById('u-role').value, location: document.getElementById('u-location').value, bloodType: 'A+' };
+                Toast.show("Creating...", "info");
+                const res = await API.call('register', payload);
+                if (res.success) { Toast.show("Success!", "success"); this.refresh(); } else { Toast.show(res.error, "error"); }
+            },
+            async createAdmin() {
+                const payload = { name: document.getElementById('a-name').value, email: document.getElementById('a-email').value, password: document.getElementById('a-pass').value, phone: '0000000000', location: 'HQ' };
+                if(!payload.password) return;
+                Toast.show("Creating Admin...", "info");
+                const res = await API.call('createAdmin', payload);
+                if (res.success) { Toast.show("Admin Created!", "success"); this.refresh(); } else { Toast.show(res.error, "error"); }
+            },
+            async refresh() {
+                const res = await API.call('getUsers');
+                if (res.success) { window.AdminState.users = res.users; this.renderTable(); }
+            },
+            renderTable() {
+                const tbody = document.getElementById('user-table-body');
+                if (window.AdminState.users.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No users.</td></tr>`; return; }
+                tbody.innerHTML = window.AdminState.users.map(u => {
+                    const roleColor = u.role === 'donor' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700';
+                    return `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100"><td class="p-4 font-semibold text-slate-800">${u.name}</td><td class="p-4 text-slate-500 text-sm">${u.email}</td><td class="p-4"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${roleColor}">${u.role}</span></td><td class="p-4 text-slate-600 text-sm">${u.location}</td><td class="p-4 text-right text-slate-400 text-xs">${new Date(u.date).toLocaleDateString()}</td></tr>`;
+                }).join('');
+            }
+        };
+
+        const App = {
+            init() { 
+                // 1. Initialize Auth First
+                Auth.init();
+                
+                // Only proceed if logged in
+                if(window.AdminState.currentUser) {
+                    this.initMap();
+                    this.refreshData();
+                    Analytics.init();
+                    Users.init();
+                } else {
+                    // If not logged in, show login modal (Auth handles this, but we ensure UI is ready)
+                    console.log("Waiting for authentication...");
+                }
+            },
+            
+            // Override onLoginSuccess to init App components
+            initAfterLogin() {
+                this.initMap();
+                this.refreshData();
+                Analytics.init();
+                Users.init();
+            },
+
+            switchTab(tab) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tab-${tab}`).classList.add('active');
+                ['live', 'analytics', 'users'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden-section'));
+                document.getElementById(`view-${tab}`).classList.remove('hidden-section');
+                if(tab === 'live') setTimeout(() => window.AdminState.map.invalidateSize(), 100);
+                if(tab === 'analytics') Analytics.update();
+            },
+            initMap() {
+                window.AdminState.map = L.map('admin-map').setView([28.3949, 84.1240], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.AdminState.map);
+                window.AdminState.markersLayer = L.markerClusterGroup({ iconCreateFunction: (cluster) => { return new L.DivIcon({ html: '<div><span>' + cluster.getChildCount() + '</span></div>', className: 'marker-cluster-medium', iconSize: new L.Point(40, 40) }); }, spiderfyOnMaxZoom: true, zoomToBoundsOnClick: true });
+                window.AdminState.map.addLayer(window.AdminState.markersLayer);
+            },
+            async refreshData() {
+                const res = await API.call('getSOS');
+                if (res.success) { window.AdminState.requests = res.requests; this.renderStats(); this.renderMap(); this.renderTable(); }
+            },
+            renderStats() {
+                document.getElementById('stat-total').innerText = window.AdminState.requests.length;
+                document.getElementById('stat-critical').innerText = window.AdminState.requests.filter(r => r.urgency === 'critical').length;
+                document.getElementById('stat-hospitals').innerText = [...new Set(window.AdminState.requests.map(r => r.hospital))].length;
+                document.getElementById('stat-fulfilled').innerText = 0;
+            },
+            renderMap() {
+                window.AdminState.markersLayer.clearLayers();
+                window.AdminState.requests.forEach(r => {
+                    const color = r.urgency === 'critical' ? '#ef4444' : '#3b82f6';
+                    const icon = L.divIcon({ html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;"></div>`, className: '', iconSize: [14,14], iconAnchor: [7,7] });
+                    L.marker([r.lat, r.lng], { icon }).addTo(window.AdminState.markersLayer).bindPopup(`<b>${r.hospital}</b><br>${r.bloodType}`);
+                });
+            },
+            renderTable() {
+                const tbody = document.getElementById('admin-request-table');
+                const sorted = [...window.AdminState.requests].sort((a, b) => new Date(b.time) - new Date(a.time));
+                tbody.innerHTML = sorted.map(r => `<tr class="hover:bg-slate-50 transition-colors"><td class="p-4"><span
     </script>
 </body>
 </html>
