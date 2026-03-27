@@ -49,7 +49,29 @@ const Toast = {
             icon.className = type === 'success' ? 'fas fa-check-circle text-green-400' : 
                             type === 'error' ? 'fas fa-exclamation-circle text-red-400' : 'fas fa-info-circle text-blue-400';
         }
+const API = {
+    async call(action, data = {}) {
+        const body = { action, ...data };
+        
+        // Inject User ID and Token if logged in (works for both index and admin)
+        const state = window.AppState || window.AdminState;
+        if (state && state.currentUser) {
+            body.userId = state.currentUser.id;
+            body.token = state.currentUser.token;
+        }
 
+        try {
+            const res = await fetch(CONFIG.SCRIPT_URL, { 
+                method: 'POST', 
+                body: JSON.stringify(body) 
+            });
+            return await res.json();
+        } catch (e) {
+            console.error("API Error", e);
+            return { success: false, error: "Network Error" };
+        }
+    }
+};
         toast.classList.remove('opacity-0', 'translate-y-10');
         setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-10'); }, 3000);
     }
