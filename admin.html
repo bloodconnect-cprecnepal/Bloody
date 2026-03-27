@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Command Center | Admin</title>
+    <!-- Libs -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Local -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="min-h-screen flex flex-col">
+    <nav class="admin-nav sticky top-0 z-50 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer">
+                <div class="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/50"><i class="fas fa-shield-alt"></i></div>
+                <div><h1 class="font-bold text-lg text-white leading-none">Command Center</h1><span class="text-[10px] font-bold text-indigo-400 tracking-widest uppercase">Super Admin</span></div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 px-3 py-1 bg-slate-800 rounded-full border border-slate-700"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span><span class="text-xs text-slate-300 font-mono">SYSTEM ONLINE</span></div>
+            </div>
+        </div>
+    </nav>
+    <div class="bg-white border-b border-slate-200 shadow-sm sticky top-16 z-40">
+        <div class="max-w-7xl mx-auto px-4 flex gap-8">
+            <button onclick="App.switchTab('live')" id="tab-live" class="tab-btn active"><i class="fas fa-satellite-dish mr-2"></i> Live View</button>
+            <button onclick="App.switchTab('analytics')" id="tab-analytics" class="tab-btn"><i class="fas fa-chart-line mr-2"></i> Analytics</button>
+            <button onclick="App.switchTab('users')" id="tab-users" class="tab-btn"><i class="fas fa-users-cog mr-2"></i> User Management</button>
+        </div>
+    </div>
+    <main class="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full fade-in relative">
+        <!-- LIVE VIEW -->
+        <div id="view-live">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between"><div><div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Requests</div><div class="text-3xl font-extrabold text-slate-800 mt-1" id="stat-total">0</div></div><div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl"><i class="fas fa-list-alt"></i></div></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between"><div><div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Active Critical</div><div class="text-3xl font-extrabold text-red-600 mt-1" id="stat-critical">0</div></div><div class="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-xl"><i class="fas fa-exclamation-triangle"></i></div></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between"><div><div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Hospitals</div><div class="text-3xl font-extrabold text-slate-800 mt-1" id="stat-hospitals">0</div></div><div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl"><i class="fas fa-hospital-symbol"></i></div></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between"><div><div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Fulfilled</div><div class="text-3xl font-extrabold text-green-600 mt-1" id="stat-fulfilled">0</div></div><div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl"><i class="fas fa-check-circle"></i></div></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8 h-[450px] relative">
+                <div class="absolute top-4 left-4 z-[500] bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm border border-slate-100"><span class="text-xs font-bold text-slate-600"><i class="fas fa-layer-group mr-1 text-indigo-500"></i> Clustered View</span></div>
+                <div id="admin-map" class="w-full h-full bg-slate-100"></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden"><div class="p-6 border-b border-slate-100"><h3 class="font-bold text-lg text-slate-800">Live Request Logs</h3></div><div class="overflow-x-auto custom-scroll max-h-[500px]"><table class="w-full text-left border-collapse"><thead class="bg-slate-50 sticky top-0 z-10"><tr class="text-slate-500 text-xs uppercase font-bold tracking-wider border-b border-slate-200"><th class="p-4">Status</th><th class="p-4">Hospital</th><th class="p-4">Type/Units</th><th class="p-4">Time</th><th class="p-4 text-right">Actions</th></tr></thead><tbody id="admin-request-table" class="text-sm divide-y divide-slate-100"></tbody></table></div></div>
+        </div>
+        <!-- ANALYTICS VIEW -->
+        <div id="view-analytics" class="hidden-section">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200"><div class="text-xs font-bold text-slate-400 uppercase">Total Volume</div><div class="text-2xl font-extrabold text-indigo-600" id="ana-total">0</div></div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200"><div class="text-xs font-bold text-slate-400 uppercase">Avg. Daily</div><div class="text-2xl font-extrabold text-slate-800" id="ana-avg">0</div></div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200"><div class="text-xs font-bold text-slate-400 uppercase">Most Needed</div><div class="text-2xl font-extrabold text-red-600" id="ana-top-type">A+</div></div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200"><div class="text-xs font-bold text-slate-400 uppercase">Rate</div><div class="text-2xl font-extrabold text-green-600" id="ana-rate">0%</div></div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-bold text-slate-800 mb-4">Trends</h3><div class="chart-container"><canvas id="trendChart"></canvas></div></div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-bold text-slate-800 mb-4">Distribution</h3><div class="chart-container relative flex justify-center"><canvas id="typeChart"></canvas></div></div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200"><h3 class="font-bold text-slate-800 mb-4">Top Hospitals</h3><div class="chart-container" style="height: 250px;"><canvas id="hospitalChart"></canvas></div></div>
+        </div>
+        <!-- USER VIEW -->
+        <div id="view-users" class="hidden-section">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-lg mb-4 text-indigo-600 flex items-center gap-2"><i class="fas fa-user-plus"></i> Register User</h3>
+                        <form onsubmit="event.preventDefault(); Users.create();" class="space-y-3">
+                            <input type="text" id="u-name" placeholder="Full Name" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <input type="email" id="u-email" placeholder="Email" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <select id="u-role" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm"><option value="donor">Donor</option><option value="hospital">Hospital</option></select>
+                            <input type="tel" id="u-phone" placeholder="Phone" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <input type="text" id="u-location" placeholder="Location" required class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-indigo-500/30 transition text-sm">Create User</button>
+                        </form>
+                    </div>
+                    <div class="bg-slate-900 text-white p-6 rounded-2xl shadow-sm border border-slate-700">
+                        <h3 class="font-bold text-lg mb-4 text-amber-400 flex items-center gap-2"><i class="fas fa-user-shield"></i> Create Admin</h3>
+                        <form onsubmit="event.preventDefault(); Users.createAdmin();" class="space-y-3">
+                            <input type="text" id="a-name" placeholder="Admin Name" required class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500">
+                            <input type="email" id="a-email" placeholder="Email" required class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500">
+                            <input type="password" id="a-pass" placeholder="Password" required class="w-full p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500">
+                            <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-2.5 rounded-xl shadow-lg shadow-amber-500/20 transition text-sm mt-2">Grant Access</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden min-h-[600px]"><div class="p-6 border-b border-slate-100 bg-slate-50"><h3 class="font-bold text-slate-800">Users Directory</h3></div><div class="overflow-x-auto custom-scroll"><table class="w-full text-left border-collapse"><thead class="bg-white sticky top-0 z-10"><tr class="text-slate-500 text-xs uppercase font-bold tracking-wider border-b border-slate-200"><th class="p-4">Name</th><th class="p-4">Email</th><th class="p-4">Role</th><th class="p-4">Location</th><th class="p-4 text-right">Joined</th></tr></thead><tbody id="user-table-body" class="text-sm divide-y divide-slate-100"><tr><td colspan="5" class="p-8 text-center text-slate-400">Loading...</td></tr></tbody></table></div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-3 rounded-lg shadow-2xl z-[200] flex items-center gap-3 transition-all duration-300 opacity-0 translate-y-10 pointer-events-none max-w-sm"><i id="toast-icon" class="fas fa-info-circle"></i><span id="toast-msg" class="text-sm font-medium">Notification</span></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="api.js"></script>
+    <script>
+        // Admin State
+        window.AdminState = {
+            requests: [],
+            users: [],
+            map: null,
+            markersLayer: null,
+            charts: {}
+        };
+
+        const Analytics = {
+            init() { this.initCharts(); this.update(); },
+            initCharts() {
+                const ctxTrend = document.getElementById('trendChart').getContext('2d'); this.trendChart = new Chart(ctxTrend, { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { borderDash: [2, 4] } }, x: { grid: { display: false } } } } });
+                const ctxType = document.getElementById('typeChart').getContext('2d'); this.typeChart = new Chart(ctxType, { type: 'doughnut', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+                const ctxHosp = document.getElementById('hospitalChart').getContext('2d'); this.hospitalChart = new Chart(ctxHosp, { type: 'bar', data: { labels: [], datasets: [] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } } } });
+            },
+            update() {
+                const range = 'daily'; // Simplified for demo
+                const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const dataPoints = labels.map(() => Math.floor(Math.random() * 50));
+                this.trendChart.data = { labels: labels, datasets: [{ label: 'Requests', data: dataPoints, borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.4 }] };
+                this.trendChart.update();
+
+                const typeCounts = { 'A+':0, 'B+':0, 'AB+':0, 'O+':0, 'A-':0, 'B-':0, 'AB-':0, 'O-':0 };
+                window.AdminState.requests.forEach(r => { if (typeCounts[r.bloodType] !== undefined) typeCounts[r.bloodType]++; });
+                this.typeChart.data = { labels: Object.keys(typeCounts), datasets: [{ data: Object.values(typeCounts), backgroundColor: ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6'], borderWidth: 0 }] };
+                this.typeChart.update();
+
+                const hospCounts = {}; window.AdminState.requests.forEach(r => { hospCounts[r.hospital] = (hospCounts[r.hospital] || 0) + 1; });
+                const sortedHosp = Object.entries(hospCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+                const hospLabels = sortedHosp.length ? sortedHosp.map(x => x[0]) : ['Grande', 'TU', 'Patan'];
+                const hospData = sortedHosp.length ? sortedHosp.map(x => x[1]) : [12, 8, 5, 4, 2];
+                this.hospitalChart.data = { labels: hospLabels, datasets: [{ label: 'Requests', data: hospData, backgroundColor: '#6366f1', borderRadius: 4 }] };
+                this.hospitalChart.update();
+
+                document.getElementById('ana-total').innerText = dataPoints.reduce((a,b)=>a+b, 0);
+                document.getElementById('ana-avg').innerText = Math.round(dataPoints.reduce((a,b)=>a+b, 0) / 7);
+                const topType = Object.keys(typeCounts).reduce((a, b) => typeCounts[a] > typeCounts[b] ? a : b);
+                document.getElementById('ana-top-type').innerText = topType;
+            }
+        };
+
+        const Users = {
+            init() { this.refresh(); },
+            async create() {
+                const payload = { name: document.getElementById('u-name').value, email: document.getElementById('u-email').value, phone: document.getElementById('u-phone').value, role: document.getElementById('u-role').value, location: document.getElementById('u-location').value, bloodType: 'A+' };
+                Toast.show("Creating...", "info");
+                const res = await API.call('register', payload);
+                if (res.success) { Toast.show("Success!", "success"); this.refresh(); } else { Toast.show(res.error, "error"); }
+            },
+            async createAdmin() {
+                const payload = { name: document.getElementById('a-name').value, email: document.getElementById('a-email').value, password: document.getElementById('a-pass').value, phone: '0000000000', location: 'HQ' };
+                if(!payload.password) return;
+                Toast.show("Creating Admin...", "info");
+                const res = await API.call('createAdmin', payload);
+                if (res.success) { Toast.show("Admin Created!", "success"); this.refresh(); } else { Toast.show(res.error, "error"); }
+            },
+            async refresh() {
+                const res = await API.call('getUsers');
+                if (res.success) { window.AdminState.users = res.users; this.renderTable(); }
+            },
+            renderTable() {
+                const tbody = document.getElementById('user-table-body');
+                if (window.AdminState.users.length === 0) { tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No users.</td></tr>`; return; }
+                tbody.innerHTML = window.AdminState.users.map(u => {
+                    const roleColor = u.role === 'donor' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700';
+                    return `<tr class="hover:bg-slate-50 transition-colors border-b border-slate-100"><td class="p-4 font-semibold text-slate-800">${u.name}</td><td class="p-4 text-slate-500 text-sm">${u.email}</td><td class="p-4"><span class="px-2 py-1 rounded text-[10px] font-bold uppercase ${roleColor}">${u.role}</span></td><td class="p-4 text-slate-600 text-sm">${u.location}</td><td class="p-4 text-right text-slate-400 text-xs">${new Date(u.date).toLocaleDateString()}</td></tr>`;
+                }).join('');
+            }
+        };
+
+        const App = {
+            init() { this.initMap(); this.refreshData(); Analytics.init(); Users.init(); },
+            switchTab(tab) {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.getElementById(`tab-${tab}`).classList.add('active');
+                ['live', 'analytics', 'users'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden-section'));
+                document.getElementById(`view-${tab}`).classList.remove('hidden-section');
+                if(tab === 'live') setTimeout(() => window.AdminState.map.invalidateSize(), 100);
+                if(tab === 'analytics') Analytics.update();
+            },
+            initMap() {
+                window.AdminState.map = L.map('admin-map').setView([28.3949, 84.1240], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(window.AdminState.map);
+                window.AdminState.markersLayer = L.markerClusterGroup({ iconCreateFunction: (cluster) => { return new L.DivIcon({ html: '<div><span>' + cluster.getChildCount() + '</span></div>', className: 'marker-cluster-medium', iconSize: new L.Point(40, 40) }); }, spiderfyOnMaxZoom: true, zoomToBoundsOnClick: true });
+                window.AdminState.map.addLayer(window.AdminState.markersLayer);
+            },
+            async refreshData() {
+                const res = await API.call('getSOS');
+                if (res.success) { window.AdminState.requests = res.requests; this.renderStats(); this.renderMap(); this.renderTable(); }
+            },
+            renderStats() {
+                document.getElementById('stat-total').innerText = window.AdminState.requests.length;
+                document.getElementById('stat-critical').innerText = window.AdminState.requests.filter(r => r.urgency === 'critical').length;
+                document.getElementById('stat-hospitals').innerText = [...new Set(window.AdminState.requests.map(r => r.hospital))].length;
+                document.getElementById('stat-fulfilled').innerText = 0; // Simplified
+            },
+            renderMap() {
+                window.AdminState.markersLayer.clearLayers();
+                window.AdminState.requests.forEach(r => {
+                    const color = r.urgency === 'critical' ? '#ef4444' : '#3b82f6';
+                    const icon = L.divIcon({ html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;"></div>`, className: '', iconSize: [14,14], iconAnchor: [7,7] });
+                    L.marker([r.lat, r.lng], { icon }).addTo(window.AdminState.markersLayer).bindPopup(`<b>${r.hospital}</b><br>${r.bloodType}`);
+                });
+            },
+            renderTable() {
+                const tbody = document.getElementById('admin-request-table');
+                const sorted = [...window.AdminState.requests].sort((a, b) => new Date(b.time) - new Date(a.time));
+                tbody.innerHTML = sorted.map(r => `<tr class="hover:bg-slate-50 transition-colors"><td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold uppercase bg-slate-100 text-slate-600">${r.urgency}</span></td><td class="p-4 font-semibold text-slate-800">${r.hospital}</td><td class="p-4"><span class="font-bold text-slate-900">${r.bloodType}</span> <span class="text-slate-400 text-xs">x${r.units}</span></td><td class="p-4 text-slate-400 text-xs">${new Date(r.time).toLocaleString()}</td><td class="p-4 text-right"><button onclick="App.fulfill('${r.id}')" class="text-xs bg-slate-200 hover:bg-green-600 hover:text-white px-3 py-1.5 rounded font-bold transition">Fulfill</button></td></tr>`).join('');
+            },
+            async fulfill(id) {
+                const res = await API.call('fulfillSOS', { sosId: id });
+                if(res.success) { Toast.show("Fulfilled", "success"); this.refreshData(); }
+            }
+        }; window.addEventListener('DOMContentLoaded', () => App.init());
+    </script>
+</body>
+</html>
