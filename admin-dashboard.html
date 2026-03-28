@@ -1,0 +1,785 @@
+<!-- admin-dashboard.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Blood Connect Nepal</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .stat-card.emergency {
+            border-left-color: #e74c3c;
+        }
+
+        .stat-card.urgent {
+            border-left-color: #f39c12;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .stat-icon {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .request-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .request-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 100px;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .request-item:hover {
+            background: #f8f9fa;
+        }
+
+        .request-item.emergency {
+            background: #ffe6e6;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .request-item.urgent {
+            background: #fff3e0;
+            border-left: 4px solid #f39c12;
+        }
+
+        .request-patient {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .request-blood {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .request-urgency {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .urgency-emergency {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .urgency-urgent {
+            background: #f39c12;
+            color: white;
+        }
+
+        .urgency-normal {
+            background: #3498db;
+            color: white;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status-pending {
+            background: #ecf0f1;
+            color: #34495e;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-fulfilled {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .action-btn:hover {
+            background: #764ba2;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .modal-field {
+            margin-bottom: 15px;
+        }
+
+        .modal-field label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .modal-field input,
+        .modal-field textarea,
+        .modal-field select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn.approve {
+            background: #27ae60;
+            color: white;
+        }
+
+        .modal-btn.reject {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .modal-btn.cancel {
+            background: #ecf0f1;
+            color: #333;
+        }
+
+        .blood-type-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .blood-type-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .refresh-btn, .export-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            color: white;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+        }
+
+        .export-btn {
+            background: #27ae60;
+            margin-left: 10px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            .request-item {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <div>
+                <h1>🩸 Admin Dashboard</h1>
+                <p style="color: #666; margin-top: 5px;">Blood Request Management</p>
+            </div>
+            <div class="user-info">
+                <div>
+                    <div style="font-weight: 600; color: #333;" id="userName">Admin</div>
+                    <div style="color: #666; font-size: 12px;">Super Admin</div>
+                </div>
+                <div class="user-avatar">A</div>
+            </div>
+        </div>
+
+        <div id="alertBox" class="alert"></div>
+
+        <div class="stats-grid">
+            <div class="stat-card emergency">
+                <div class="stat-icon">🚨</div>
+                <div class="stat-value" id="emergencyCount">0</div>
+                <div class="stat-label">Emergency Requests</div>
+            </div>
+            <div class="stat-card urgent">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-value" id="urgentCount">0</div>
+                <div class="stat-label">Urgent Requests</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">⏳</div>
+                <div class="stat-value" id="pendingCount">0</div>
+                <div class="stat-label">Pending Approval</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✓</div>
+                <div class="stat-value" id="fulfilledCount">0</div>
+                <div class="stat-label">Fulfilled Today</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Blood Requests</h2>
+                    <div>
+                        <button class="refresh-btn" onclick="refreshDashboard()">🔄 Refresh</button>
+                        <button class="export-btn" onclick="exportRequests()">📊 Export</button>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <button class="filter-btn active" onclick="filterRequests('all')">All</button>
+                    <button class="filter-btn" onclick="filterRequests('Emergency')">🚨 Emergency</button>
+                    <button class="filter-btn" onclick="filterRequests('Urgent')">⚠️ Urgent</button>
+                    <button class="filter-btn" onclick="filterRequests('Pending')">⏳ Pending</button>
+                </div>
+
+                <div class="request-list" id="requestList">
+                    <div class="no-data">Loading requests...</div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <h2>Blood Type Requests</h2>
+                    <div class="blood-type-stats" id="bloodTypeStats"></div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h2>Today's Overview</h2>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Total Requests</span>
+                            <span style="font-weight: 600;" id="todayTotal">0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Approved</span>
+                            <span style="font-weight: 600; color: #27ae60;" id="todayApproved">0</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span>Pending</span>
+                            <span style="font-weight: 600; color: #f39c12;" id="todayPending">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request Details Modal -->
+    <div id="requestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Request Details</div>
+            <div id="modalBody"></div>
+            <div class="modal-actions" id="modalActions"></div>
+        </div>
+    </div>
+
+    <script>
+        let allRequests = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRequests();
+            setInterval(loadRequests, 5 * 60 * 1000);
+        });
+
+        async function loadRequests() {
+            try {
+                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'getBloodRequests',
+                        filters: {}
+                    }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                if (result.success && result.requests) {
+                    allRequests = result.requests;
+                    updateDashboard();
+                    displayRequests(allRequests);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function updateDashboard() {
+            const emergency = allRequests.filter(r => r.Urgency === 'Emergency').length;
+            const urgent = allRequests.filter(r => r.Urgency === 'Urgent').length;
+            const pending = allRequests.filter(r => r.Status === 'Pending').length;
+            const fulfilled = allRequests.filter(r => r.Status === 'Fulfilled').length;
+
+            document.getElementById('emergencyCount').textContent = emergency;
+            document.getElementById('urgentCount').textContent = urgent;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('fulfilledCount').textContent = fulfilled;
+
+            updateBloodTypeStats();
+            updateTodayStats();
+        }
+
+        function updateBloodTypeStats() {
+            const bloodTypes = ['O+', 'O-', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-'];
+            const counts = {};
+            
+            bloodTypes.forEach(type => {
+                counts[type] = allRequests.filter(r => r.BloodType === type)
+                    .reduce((sum, r) => sum + parseInt(r.Quantity), 0);
+            });
+
+            const html = bloodTypes.map(type => `
+                <div class="blood-type-item">
+                    <span style="font-weight: 600;">${type}</span>
+                    <span style="background: #667eea; color: white; padding: 5px 10px; border-radius: 4px; font-weight: 600;">${counts[type]}</span>
+                </div>
+            `).join('');
+
+            document.getElementById('bloodTypeStats').innerHTML = html;
+        }
+
+        function updateTodayStats() {
+            const today = new Date().toDateString();
+            const todayRequests = allRequests.filter(r => {
+                const reqDate = new Date(r.Date).toDateString();
+                return reqDate === today;
+            });
+
+            document.getElementById('todayTotal').textContent = todayRequests.length;
+            document.getElementById('todayApproved').textContent = todayRequests.filter(r => r.Status === 'Approved').length;
+            document.getElementById('todayPending').textContent = todayRequests.filter(r => r.Status === 'Pending').length;
+        }
+
+        function displayRequests(requests) {
+            const list = document.getElementById('requestList');
+            if (requests.length === 0) {
+                list.innerHTML = '<div class="no-data">No requests found</div>';
+                return;
+            }
+
+            list.innerHTML = requests.map(req => `
+                <div class="request-item ${req.Urgency.toLowerCase()}" onclick="viewDetails('${req.RequestID}')">
+                    <div>
+                        <div class="request-patient">${req.PatientName}</div>
+                        <div style="font-size: 12px; color: #666;">${req.PatientID}</div>
+                    </div>
+                    <div>
+                        <div class="request-blood">${req.BloodType} × ${req.Quantity}</div>
+                        <div style="font-size: 12px; color: #666;">${req.HospitalName}</div>
+                    </div>
+                    <div>
+                        <div class="request-urgency urgency-${req.Urgency.toLowerCase()}">${req.Urgency}</div>
+                        <div class="status-badge status-${req.Status.toLowerCase()}" style="margin-top: 5px;">${req.Status}</div>
+                    </div>
+                    <button class="action-btn" onclick="event.stopPropagation();">Review</button>
+                </div>
+            `).join('');
+        }
+
+        function filterRequests(filter) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (filter === 'all') {
+                displayRequests(allRequests);
+            } else {
+                const filtered = allRequests.filter(r => 
+                    (['Emergency', 'Urgent'].includes(filter) ? r.Urgency === filter : r.Status === filter)
+                );
+                displayRequests(filtered);
+            }
+        }
+
+        function viewDetails(requestId) {
+            const request = allRequests.find(r => r.RequestID === requestId);
+            if (!request) return;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div class="modal-field">
+                        <label>Patient Name</label>
+                        <input type="text" value="${request.PatientName}" readonly>
+                    </div>
+                    <div class="modal-field">
+                        <label>Blood Type</label>
+                        <input type="text" value="${request.BloodType}" readonly>
+                    </div>
+                    <div class="modal-field">
+                        <label>Quantity</label>
+                        <input type="text" value="${request.Quantity} units" readonly>
+                    </div>
+                    <div class="modal-field">
+                        <label>Urgency</label>
+                        <input type="text" value="${request.Urgency}" readonly>
+                    </div>
+                    <div class="modal-field">
+                        <label>Hospital</label>
+                        <input type="text" value="${request.HospitalName}" readonly>
+                    </div>
+                    <div class="modal-field">
+                        <label>Doctor</label>
+                        <input type="text" value="${request.DoctorName}" readonly>
+                    </div>
+                </div>
+                <div class="modal-field">
+                    <label>Contact Person</label>
+                    <input type="text" value="${request.ContactName} (${request.ContactPhone})" readonly>
+                </div>
+            `;
+
+            const modalActions = document.getElementById('modalActions');
+            if (request.Status === 'Pending') {
+                modalActions.innerHTML = `
+                    <button class="modal-btn cancel" onclick="closeModal()">Close</button>
+                    <button class="modal-btn reject" onclick="rejectRequest('${requestId}')">Reject</button>
+                    <button class="modal-btn approve" onclick="approveRequest('${requestId}')">Approve</button>
+                `;
+            } else {
+                modalActions.innerHTML = `
+                    <button class="modal-btn cancel" onclick="closeModal()">Close</button>
+                `;
+            }
+
+            document.getElementById('requestModal').classList.add('show');
+        }
+
+        async function approveRequest(requestId) {
+            const notes = prompt('Enter approval notes:');
+            if (!notes) return;
+
+            try {
+                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'updateRequestStatus',
+                        requestId: requestId,
+                        status: 'Approved',
+                        notes: notes
+                    }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Request approved!', 'success');
+                    closeModal();
+                    loadRequests();
+                }
+            } catch (error) {
+                showAlert('Error approving request', 'error');
+            }
+        }
+
+        async function rejectRequest(requestId) {
+            const reason = prompt('Enter rejection reason:');
+            if (!reason) return;
+
+            try {
+                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'updateRequestStatus',
+                        requestId: requestId,
+                        status: 'Rejected',
+                        reason: reason
+                    }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showAlert('Request rejected', 'success');
+                    closeModal();
+                    loadRequests();
+                }
+            } catch (error) {
+                showAlert('Error rejecting request', 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('requestModal').classList.remove('show');
+        }
+
+        function refreshDashboard() {
+            loadRequests();
+            showAlert('Dashboard refreshed', 'success');
+        }
+
+        function exportRequests() {
+            const csv = [
+                ['Request ID', 'Date', 'Patient', 'Blood Type', 'Qty', 'Urgency', 'Hospital', 'Status'].join(','),
+                ...allRequests.map(r =>
+                    [r.RequestID, r.Date, r.PatientName, r.BloodType, r.Quantity, r.Urgency, r.HospitalName, r.Status].join(',')
+                )
+            ].join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `blood-requests-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alertBox');
+            alert.textContent = message;
+            alert.className = `alert alert-${type} show`;
+            setTimeout(() => alert.classList.remove('show'), 5000);
+        }
+
+        document.getElementById('requestModal').addEventListener('click', (e) => {
+            if (e.target.id === 'requestModal') closeModal();
+        });
+    </script>
+</body>
+</html>
