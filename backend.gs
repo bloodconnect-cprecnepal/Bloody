@@ -64,3 +64,50 @@ function mainFunction(userInput, action) {
         throw error;
     }
 }
+// Add to backend.gs - within doPost function
+else if (data.action === 'updateRequestStatus') {
+    const result = handleBloodRequestStatusUpdate(
+        data.requestId,
+        data.status,
+        data.notes || '',
+        data.sendSMS !== false
+    );
+    return success(result);
+}
+
+// Add getRequestStatus handler
+else if (data.action === 'getRequestStatus') {
+    const request = findBloodRequest(data.requestId, data.phone);
+    if (request) {
+        return success({ request: request });
+    }
+    return error('Request not found');
+}
+
+// Helper function
+function findBloodRequest(requestId, contactPhone) {
+    const sheet = getBloodRequestSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === requestId && data[i][15] === contactPhone) {
+            return {
+                RequestID: data[i][0],
+                Date: data[i][1],
+                PatientName: data[i][2],
+                BloodType: data[i][8],
+                Quantity: data[i][9],
+                Urgency: data[i][10],
+                HospitalName: data[i][16],
+                Department: data[i][17],
+                ContactName: data[i][12],
+                ContactRelationship: data[i][13],
+                ContactPhone: data[i][14],
+                Status: data[i][22],
+                CreatedAt: data[i][23],
+                UpdatedAt: data[i][24]
+            };
+        }
+    }
+    return null;
+}
